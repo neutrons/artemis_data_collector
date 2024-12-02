@@ -1,8 +1,8 @@
 [project]
-name = "examplepyapp"
-description = "Example Python repo for neutrons"
+name = "artemis_data_collector"
+description = "Artemis Data Collector"
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
   # list all runtime dependencies here
 ]
@@ -11,10 +11,10 @@ keywords = ["neutrons", "example", "python"]
 readme = "README.md"
 
 [project.urls]
-homepage = "https://github.com/neutrons/python_project_template/"  # if no homepage, use repo url
-repository = "https://github.com/neutrons/python_project_template/"
+homepage = "https://github.com/neutrons/artemis_data_collector/"  # if no homepage, use repo url
+repository = "https://github.com/neutrons/artemis_data_collector/"
 # documentation = add_url_to_readthedoc_here
-issues = "https://github.com/neutrons/python_project_template/issues"
+issues = "https://github.com/neutrons/artemis_data_collector/issues"
 
 [build-system]
 requires = [
@@ -38,7 +38,7 @@ dirty = "{version}+d{build_date:%Y%m%d}"
 distance-dirty = "{next_version}.dev{distance}+d{build_date:%Y%m%d%H%M}"
 
 [tool.versioningit.write]
-file = "src/packagenamepy/_version.py"
+file = "src/artemis_data_collector/_version.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -48,10 +48,7 @@ exclude = ["tests*", "scripts*", "docs*", "notebooks*"]
 "*" = ["*.yml","*.yaml","*.ini"]
 
 [project.scripts]
-packagename-cli = "packagenamepy.packagename:main"
-
-[project.gui-scripts]
-packagenamepy = "packagenamepy.packagename:gui"
+artemis_data_collector = "artemis_data_collector.artemis_data_collector:main"
 
 [tool.pytest.ini_options]
 pythonpath = [
@@ -60,9 +57,6 @@ pythonpath = [
 testpaths = ["tests"]
 python_files = ["test*.py"]
 norecursedirs = [".git", "tmp*", "_tmp*", "__pycache__", "*dataset*", "*data_set*"]
-markers = [
-    "mymarker: example markers goes here"
-]
 
 [tool.ruff]
 line-length = 120

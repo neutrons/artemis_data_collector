@@ -1,5 +1,5 @@
-from packagenamepy import __version__
+from artemis_data_collector import __version__
 
 
 def test_version():
-    assert __version__ == "unknown"
+    assert __version__
