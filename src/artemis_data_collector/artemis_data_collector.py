@@ -10,12 +10,18 @@ import requests
 logger = logging.getLogger("AtremisDataCollector")
 
 
-def initialize_database_tables(db_hostname, db_port, db_user, db_password, db_name):
+def initialize_database_tables(config):
     """Initializes the tables in the database from sql files. This will fail if the tables already exist.
 
     WebMon should have already created the tables so this is mostly for testing."""
     logger.info("Initializing tables")
-    with psycopg.connect(dbname=db_name, host=db_hostname, port=db_port, user=db_user, password=db_password) as conn:
+    with psycopg.connect(
+        dbname=config.database_name,
+        host=config.database_hostname,
+        port=config.database_port,
+        user=config.database_user,
+        password=config.database_password,
+    ) as conn:
         with conn.cursor() as cur:
             cur.execute(files("artemis_data_collector.sql").joinpath("report_statusqueue.sql").read_text())
             conn.commit()
@@ -90,11 +96,8 @@ class ArtemisDataCollector:
         """Make a request to ActiveMQ Artemis Jolokia API"""
         try:
             response = self.session.get(self.base_url + query)
-        except requests.exceptions.Timeout as e:
-            logger.error(f"Timeout: {e}")
-            return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error: {e}")
+            logger.error(e)
             return None
 
         if response.status_code != 200:
@@ -164,7 +167,7 @@ class ArtemisDataCollector:
         return queue_map
 
 
-def main():
+def parse_args(args):
     parser = argparse.ArgumentParser(description="Collect data from Artemis")
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
     parser.add_argument(
@@ -187,24 +190,21 @@ def main():
     parser.add_argument("--interval", type=int, default=600, help="Interval to collect data (seconds)")
     parser.add_argument("--log_level", default="INFO", help="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
     parser.add_argument("--log_file", help="Log file. If not specified, log to stdout")
-    config = parser.parse_args()
+    return parser.parse_args(args)
 
+
+def main():
+    config = parse_args(sys.argv[1:])
     # setup logging
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=config.log_level, filename=config.log_file
     )
 
-    try:
-        if config.initialize_db:
-            initialize_database_tables(
-                config.database_hostname,
-                config.database_port,
-                config.database_user,
-                config.database_password,
-                config.database_name,
-            )
-            return 0
+    if config.initialize_db:
+        initialize_database_tables(config)
+        return 0
 
+    try:
         adc = ArtemisDataCollector(config)
         adc.run()
     except KeyboardInterrupt:
@@ -212,7 +212,7 @@ def main():
         return 0
     except Exception as e:
         # catch any unhandled exception and log it before exiting
-        logger.exception(f"Error: {e}")
+        logger.exception(e)
         return 1
 
 

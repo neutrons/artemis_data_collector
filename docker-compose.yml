@@ -1,0 +1,19 @@
+services:
+
+  db:
+    restart: always
+    image: postgres:14
+    environment:
+      POSTGRES_DB: workflow
+      POSTGRES_USER: workflow
+      POSTGRES_PASSWORD: workflow
+    ports:
+      - 5432:5432
+
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    volumes:
+      - ./tests/data/broker.xml:/var/lib/artemis-instance/etc-override/broker.xml
+    ports:
+      - 8161:8161
+      - 61613:61613
