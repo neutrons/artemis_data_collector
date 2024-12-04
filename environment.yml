@@ -9,12 +9,12 @@ dependencies:
   # compute: list all compute dependencies here
   - psycopg>=3.2
   - requests
-  - stomp.py
   # -- Development dependencies
   # utils:
   - pre-commit
   # package building:
   - python-build
   # test: list all test dependencies here
+  - stomp.py
   - pytest
   - pytest-cov

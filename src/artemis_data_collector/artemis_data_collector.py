@@ -1,8 +1,10 @@
 import argparse
+import ast
 import logging
 import sys
 import time
 from importlib.resources import files
+from os import environ
 
 import psycopg
 import requests
@@ -40,7 +42,7 @@ class ArtemisDataCollector:
         self._session.auth = (self.config.artemis_user, self.config.artemis_password)
         self._session.headers.update({"Origin": "localhost"})
 
-        self.base_url = f"{self.config.artemis_url}/console/jolokia/read/org.apache.activemq.artemis:broker=%22{self.config.broker_name}%22"  # noqa: E501
+        self.base_url = f"{self.config.artemis_url}/console/jolokia/read/org.apache.activemq.artemis:broker=%22{self.config.artemis_broker_name}%22"  # noqa: E501
 
         database_statusqueues = self.get_database_statusqueues()
         amq_queues = self.get_activemq_queues()
@@ -168,6 +170,7 @@ class ArtemisDataCollector:
 
 
 def parse_args(args):
+    # parse command line arguments where values can alternavitly be set via environment variables
     parser = argparse.ArgumentParser(description="Collect data from Artemis")
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
     parser.add_argument(
@@ -175,26 +178,58 @@ def parse_args(args):
         action="store_true",
         help="Initialize the database table and exit. Will fail if tables already exist",
     )
-    parser.add_argument("--artemis_url", default="http://localhost:8161", help="URL of the Artemis instance")
-    parser.add_argument("--artemis_user", default="artemis", help="User of the Artemis instance")
-    parser.add_argument("--artemis_password", default="artemis", help="Password of the Artemis instance")
-    parser.add_argument("--broker_name", default="0.0.0.0", help="Name of the Artemis broker")
-    parser.add_argument("--database_hostname", default="localhost", help="Hostname of the database")
-    parser.add_argument("--database_port", type=int, default=5432, help="Port of the database")
-    parser.add_argument("--database_user", default="workflow", help="User of the database")
-    parser.add_argument("--database_password", default="workflow", help="Password of the database")
-    parser.add_argument("--database_name", default="workflow", help="Name of the database")
     parser.add_argument(
-        "--queue_list", nargs="*", help="List of queues to monitor. If not specified, monitor all queues from database"
+        "--artemis_url", default=environ.get("ARTEMIS_URL", "http://localhost:8161"), help="URL of the Artemis instance"
     )
-    parser.add_argument("--interval", type=int, default=600, help="Interval to collect data (seconds)")
-    parser.add_argument("--log_level", default="INFO", help="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
-    parser.add_argument("--log_file", help="Log file. If not specified, log to stdout")
+    parser.add_argument(
+        "--artemis_user", default=environ.get("ARTEMIS_USER", "artemis"), help="User of the Artemis instance"
+    )
+    parser.add_argument(
+        "--artemis_password",
+        default=environ.get("ARTEMIS_PASSWORD", "artemis"),
+        help="Password of the Artemis instance",
+    )
+    parser.add_argument(
+        "--artemis_broker_name",
+        default=environ.get("ARTEMIS_BROKER_NAME", "0.0.0.0"),
+        help="Name of the Artemis broker",
+    )
+    parser.add_argument(
+        "--database_hostname", default=environ.get("DATABASE_HOST", "localhost"), help="Hostname of the database"
+    )
+    parser.add_argument(
+        "--database_port", type=int, default=environ.get("DATABASE_PORT", 5432), help="Port of the database"
+    )
+    parser.add_argument(
+        "--database_user", default=environ.get("DATABASE_USER", "workflow"), help="User of the database"
+    )
+    parser.add_argument(
+        "--database_password", default=environ.get("DATABASE_PASS", "workflow"), help="Password of the database"
+    )
+    parser.add_argument(
+        "--database_name", default=environ.get("DATABASE_NAME", "workflow"), help="Name of the database"
+    )
+    parser.add_argument(
+        "--queue_list",
+        nargs="*",
+        default=ast.literal_eval(environ.get("QUEUE_LIST", "None")),
+        help="List of queues to monitor. If not specified, monitor all queues from database",
+    )
+    parser.add_argument(
+        "--interval", type=int, default=environ.get("INTERVAL", 600), help="Interval to collect data (seconds)"
+    )
+    parser.add_argument(
+        "--log_level",
+        default=environ.get("LOG_LEVEL", "INFO"),
+        help="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+    parser.add_argument("--log_file", default=environ.get("LOG_FILE"), help="Log file. If not specified, log to stdout")
     return parser.parse_args(args)
 
 
 def main():
     config = parse_args(sys.argv[1:])
+
     # setup logging
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=config.log_level, filename=config.log_file

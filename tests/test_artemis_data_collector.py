@@ -1,5 +1,6 @@
 import unittest
 from collections import namedtuple
+from os import environ
 
 import psycopg
 import pytest
@@ -13,7 +14,7 @@ Config = namedtuple(
         "artemis_user",
         "artemis_password",
         "artemis_url",
-        "broker_name",
+        "artemis_broker_name",
         "queue_list",
         "database_hostname",
         "database_port",
@@ -22,6 +23,7 @@ Config = namedtuple(
         "database_name",
     ],
 )
+
 config = Config(
     "artemis",
     "artemis",
@@ -148,6 +150,24 @@ class TestArtemisDataCollector(unittest.TestCase):
 
         assert "No queues to monitor" in str(e)
 
+    def test_default_queue_list(self):
+        config_default_queues = Config(
+            "artemis",
+            "artemis",
+            "http://localhost:8161",
+            "0.0.0.0",
+            None,
+            "localhost",
+            5432,
+            "workflow",
+            "workflow",
+            "workflow",
+        )
+
+        adc = ArtemisDataCollector(config_default_queues)
+        assert len(adc.monitored_queue) == 1
+        assert "TEST_QUEUE" in adc.monitored_queue
+
     def test_invalid_artemis_url(self):
         config_invalid_url = Config(
             "artemis",
@@ -218,3 +238,9 @@ def test_parse_args():
     # test setting queue list
     args = parse_args(["--queue_list", "TEST_QUEUE", "TEST_QUEUE2", "TEST_QUEUE3"])
     assert args.queue_list == ["TEST_QUEUE", "TEST_QUEUE2", "TEST_QUEUE3"]
+
+    # test getting queue from environment variable
+    environ["QUEUE_LIST"] = '["TEST_QUEUE10", "TEST_QUEUE11", "TEST_QUEUE12"]'
+    args = parse_args([])
+    del environ["QUEUE_LIST"]
+    assert args.queue_list == ["TEST_QUEUE10", "TEST_QUEUE11", "TEST_QUEUE12"]

@@ -4,7 +4,8 @@ description = "Artemis Data Collector"
 dynamic = ["version"]
 requires-python = ">=3.12"
 dependencies = [
-  # list all runtime dependencies here
+  "requests",
+  "psycopg"
 ]
 license = { text = "MIT" }
 keywords = ["neutrons", "example", "python"]

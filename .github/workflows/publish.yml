@@ -1,0 +1,88 @@
+name: Docker publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - next
+      - qa
+      - main
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          channels: conda-forge,defaults
+          mamba-version: "*"
+          environment-file: environment.yml
+          cache-environment-key: ${{ runner.os }}-env-${{ hashFiles('**/environment.yml') }}
+          cache-downloads-key: ${{ runner.os }}-downloads-${{ hashFiles('**/environment.yml') }}
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Create tag version
+        id: tag
+        run: |
+          echo "tag=$(versioningit)" >> $GITHUB_OUTPUT
+
+      - name: Create latest tag version
+        id: latest_tag
+        run: |
+          case ${{ github.ref }} in
+
+          refs/heads/next)
+            echo "latest_tag=latest-dev" >> $GITHUB_OUTPUT
+            ;;
+
+          refs/heads/qa)
+            echo "latest_tag=latest-test" >> $GITHUB_OUTPUT
+            ;;
+
+          refs/heads/main)
+            echo "latest_tag=latest-prod" >> $GITHUB_OUTPUT
+            ;;
+
+          *)
+            exit 1
+            ;;
+
+          esac
+
+      - name: Check tag names
+        run: |
+          echo ${{ steps.latest_tag.outputs.latest_tag }}
+          echo ${{ steps.tag.outputs.tag }}
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/artemis_data_collector:${{ steps.latest_tag.outputs.latest_tag }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/artemis_data_collector:${{ steps.tag.outputs.tag }}
+          push: true
