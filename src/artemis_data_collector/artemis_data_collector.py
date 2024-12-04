@@ -176,7 +176,7 @@ def parse_args(args):
     parser.add_argument(
         "--initialize_db",
         action="store_true",
-        help="Initialize the database table and exit. Will fail if tables already exist",
+        help="Initialize the database tables and exit. Will fail if tables already exist",
     )
     parser.add_argument(
         "--artemis_url", default=environ.get("ARTEMIS_URL", "http://localhost:8161"), help="URL of the Artemis instance"

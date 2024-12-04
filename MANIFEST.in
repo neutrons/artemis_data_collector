@@ -1,0 +1,1 @@
+include src/artemis_data_collector/sql/*.sql
