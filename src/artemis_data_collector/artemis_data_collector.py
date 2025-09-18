@@ -38,11 +38,15 @@ class ArtemisDataCollector:
         self._conn = None
 
         # common session for all requests
-        self._session = self._session = requests.Session()
+        self._session = requests.Session()
         self._session.auth = (self.config.artemis_user, self.config.artemis_password)
         self._session.headers.update({"Origin": "localhost"})
 
+        # Build primary and failover base URLs
         self.base_url = f"{self.config.artemis_url}/console/jolokia/read/org.apache.activemq.artemis:broker=%22{self.config.artemis_broker_name}%22"  # noqa: E501
+        self.base_failover_url = None
+        if hasattr(self.config, "artemis_failover_url") and self.config.artemis_failover_url:
+            self.base_failover_url = f"{self.config.artemis_failover_url}/console/jolokia/read/org.apache.activemq.artemis:broker=%22{self.config.artemis_broker_name}%22"  # noqa: E501
 
         database_statusqueues = self.get_database_statusqueues()
         amq_queues = self.get_activemq_queues()
@@ -95,26 +99,47 @@ class ArtemisDataCollector:
             time.sleep(self.config.interval)
 
     def request_activemq(self, query):
-        """Make a request to ActiveMQ Artemis Jolokia API"""
+        """Make a request to ActiveMQ Artemis Jolokia API with failover support"""
+        # Try primary URL first
         try:
             response = self.session.get(self.base_url + query)
+            if response.status_code == 200:
+                try:
+                    json_response = response.json()
+                    if json_response["status"] == 200:
+                        return json_response["value"]
+                    else:
+                        logger.error(f"Primary broker error: {json_response}")
+                except requests.exceptions.JSONDecodeError:
+                    logger.error(f"Primary broker JSON decode error: {response.text}")
+            else:
+                logger.error(f"Primary broker HTTP error {response.status_code}: {response.text}")
         except requests.exceptions.RequestException as e:
-            logger.error(e)
-            return None
+            logger.error(f"Primary broker connection error: {e}")
 
-        if response.status_code != 200:
-            logger.error(f"Error: {response.text}")
-            return None
+        # If primary fails and failover is configured, try failover URL
+        if self.base_failover_url:
+            logger.info("Primary broker failed, trying failover broker")
+            try:
+                response = self.session.get(self.base_failover_url + query)
+                if response.status_code == 200:
+                    try:
+                        json_response = response.json()
+                        if json_response["status"] == 200:
+                            logger.info("Successfully connected to failover broker")
+                            return json_response["value"]
+                        else:
+                            logger.error(f"Failover broker error: {json_response}")
+                    except requests.exceptions.JSONDecodeError:
+                        logger.error(f"Failover broker JSON decode error: {response.text}")
+                else:
+                    logger.error(f"Failover broker HTTP error {response.status_code}: {response.text}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failover broker connection error: {e}")
+        else:
+            logger.warning("No failover broker configured")
 
-        try:
-            if response.json()["status"] != 200:
-                logger.error(f"Error: {response.json()}")
-                return None
-        except requests.exceptions.JSONDecodeError:
-            logger.error(f"JSON decode Error: {response.text}")
-            return None
-
-        return response.json()["value"]
+        return None
 
     def get_activemq_queues(self):
         """Returns a list of queues from the Artemis"""
@@ -171,7 +196,7 @@ class ArtemisDataCollector:
 
 def parse_args(args):
     # parse command line arguments where values can alternavitly be set via environment variables
-    parser = argparse.ArgumentParser(description="Collect data from Artemis")
+    parser = argparse.ArgumentParser(description="Collect data from Artemis with failover support")
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
     parser.add_argument(
         "--initialize_db",
@@ -179,7 +204,14 @@ def parse_args(args):
         help="Initialize the database tables and exit. Will fail if tables already exist",
     )
     parser.add_argument(
-        "--artemis_url", default=environ.get("ARTEMIS_URL", "http://localhost:8161"), help="URL of the Artemis instance"
+        "--artemis_url", 
+        default=environ.get("ARTEMIS_URL", "http://localhost:8161"), 
+        help="URL of the primary Artemis instance"
+    )
+    parser.add_argument(
+        "--artemis_failover_url",
+        default=environ.get("ARTEMIS_FAILOVER_URL"),
+        help="URL of the failover Artemis instance (optional)",
     )
     parser.add_argument(
         "--artemis_user", default=environ.get("ARTEMIS_USER", "artemis"), help="User of the Artemis instance"
