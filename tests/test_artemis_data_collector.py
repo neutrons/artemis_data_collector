@@ -21,7 +21,6 @@ Config = namedtuple(
         "database_user",
         "database_password",
         "database_name",
-        "http_timeout",
     ],
 )
 
@@ -36,7 +35,6 @@ config = Config(
     "workflow",
     "workflow",
     "workflow",
-    10.0,  # http_timeout
 )
 
 
@@ -145,7 +143,6 @@ class TestArtemisDataCollector(unittest.TestCase):
             "workflow",
             "workflow",
             "workflow",
-            10.0,  # http_timeout
         )
 
         with pytest.raises(ValueError) as e:
@@ -165,7 +162,6 @@ class TestArtemisDataCollector(unittest.TestCase):
             "workflow",
             "workflow",
             "workflow",
-            10.0,  # http_timeout
         )
 
         adc = ArtemisDataCollector(config_default_queues)
@@ -184,7 +180,6 @@ class TestArtemisDataCollector(unittest.TestCase):
             "workflow",
             "workflow",
             "workflow",
-            10.0,  # http_timeout
         )
 
         with pytest.raises(ValueError) as e:
@@ -204,7 +199,6 @@ class TestArtemisDataCollector(unittest.TestCase):
             "workflow",
             "workflow",
             "workflow",
-            10.0,  # http_timeout
         )
 
         with pytest.raises(ValueError) as e:
@@ -224,7 +218,6 @@ class TestArtemisDataCollector(unittest.TestCase):
             "workflow",
             "workflow",
             "workflow",
-            10.0,  # http_timeout
         )
 
         with pytest.raises(ValueError) as e:

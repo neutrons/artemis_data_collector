@@ -51,8 +51,7 @@ The environment variables are the following
 
 | Variable | Description |
 | -------- | ----------- |
-| ``ARTEMIS_URL`` | Base URL of the primary Artemis instance. Default ``http://localhost:8161``|
-| ``ARTEMIS_FAILOVER_URL`` | Base URL of the failover Artemis instance (optional). No default |
+| ``ARTEMIS_URL`` | Base URL of the Artemis instance. Default ``http://localhost:8161``|
 | ``ARTEMIS_USER`` | Admin user that has read permission of the API. Default ``artemis`` |
 | ``ARTEMIS_PASSWORD`` | Admin password for artemis user. Default ``artemis`` |
 | ``ARTEMIS_BROKER_NAME`` | The name of the artemis broker. This must match the one set in the ``broker.xml``. Default ``0.0.0.0`` |
@@ -63,7 +62,6 @@ The environment variables are the following
 | ``DATABASE_NAME`` | Name of database to use. Default ``workflow`` |
 | ``QUEUE_LIST`` | List of queue to monitor. If not specified, monitor all queues from database. _e.g._ ``["QUEUE1", "QUEUE2"]`` |
 | ``INTERVAL`` | Interval to collect data (seconds), Default ``600`` |
-| ``HTTP_TIMEOUT`` | HTTP timeout in seconds for broker requests. Default ``10`` |
 | ``LOG_LEVEL`` | Log level (``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL``). Default ``INFO`` |
 | ``LOG_FILE`` | Fike where to save log. If not specified, log to stdout. |
 
