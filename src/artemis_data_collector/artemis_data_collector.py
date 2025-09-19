@@ -69,7 +69,7 @@ class ArtemisDataCollector:
         if not self.monitored_queue:
             raise ValueError("No queues to monitor")
 
-        logger.info(f"Monitoring queues: {" ".join(self.monitored_queue.keys())}")
+        logger.info(f"Monitoring queues: {' '.join(self.monitored_queue.keys())}")
 
     @property
     def conn(self):
@@ -102,7 +102,7 @@ class ArtemisDataCollector:
         """Make a request to ActiveMQ Artemis Jolokia API with failover support"""
         # Try primary URL first
         try:
-            response = self.session.get(self.base_url + query)
+            response = self.session.get(self.base_url + query, timeout=self.config.http_timeout)
             if response.status_code == 200:
                 try:
                     json_response = response.json()
@@ -110,18 +110,18 @@ class ArtemisDataCollector:
                         return json_response["value"]
                     else:
                         logger.error(f"Primary broker error: {json_response}")
-                except requests.exceptions.JSONDecodeError:
-                    logger.error(f"Primary broker JSON decode error: {response.text}")
+                except (ValueError, requests.exceptions.JSONDecodeError):
+                    logger.exception("Primary broker JSON decode error (truncated payload): %s", str(response.text)[:512])
             else:
-                logger.error(f"Primary broker HTTP error {response.status_code}: {response.text}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Primary broker connection error: {e}")
+                logger.error(f"Primary broker HTTP error {response.status_code}: {str(response.text)[:512]}")
+        except requests.exceptions.RequestException:
+            logger.exception("Primary broker connection error")
 
         # If primary fails and failover is configured, try failover URL
         if self.base_failover_url:
             logger.info("Primary broker failed, trying failover broker")
             try:
-                response = self.session.get(self.base_failover_url + query)
+                response = self.session.get(self.base_failover_url + query, timeout=self.config.http_timeout)
                 if response.status_code == 200:
                     try:
                         json_response = response.json()
@@ -130,12 +130,12 @@ class ArtemisDataCollector:
                             return json_response["value"]
                         else:
                             logger.error(f"Failover broker error: {json_response}")
-                    except requests.exceptions.JSONDecodeError:
-                        logger.error(f"Failover broker JSON decode error: {response.text}")
+                    except (ValueError, requests.exceptions.JSONDecodeError):
+                        logger.exception("Failover broker JSON decode error (truncated payload): %s", str(response.text)[:512])
                 else:
-                    logger.error(f"Failover broker HTTP error {response.status_code}: {response.text}")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failover broker connection error: {e}")
+                    logger.error(f"Failover broker HTTP error {response.status_code}: {str(response.text)[:512]}")
+            except requests.exceptions.RequestException:
+                logger.exception("Failover broker connection error")
         else:
             logger.warning("No failover broker configured")
 
@@ -256,6 +256,12 @@ def parse_args(args):
         help="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
     parser.add_argument("--log_file", default=environ.get("LOG_FILE"), help="Log file. If not specified, log to stdout")
+    parser.add_argument(
+        "--http_timeout",
+        type=float,
+        default=float(environ.get("HTTP_TIMEOUT", "10")),
+        help="HTTP timeout in seconds for broker requests",
+    )
     return parser.parse_args(args)
 
 
