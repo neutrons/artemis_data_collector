@@ -14,6 +14,7 @@ Config = namedtuple(
         "artemis_user",
         "artemis_password",
         "artemis_url",
+        "artemis_failover_url",
         "artemis_broker_name",
         "queue_list",
         "database_hostname",
@@ -29,6 +30,7 @@ config = Config(
     "artemis",
     "artemis",
     "http://localhost:8161",
+    "http://invalidurl",
     "0.0.0.0",
     ["TEST_QUEUE", "TEST_QUEUE2", "DLD", "DOES_NOT_EXIST"],
     "localhost",
@@ -138,6 +140,7 @@ class TestArtemisDataCollector(unittest.TestCase):
             "artemis",
             "artemis",
             "http://localhost:8161",
+            "invalidurl",
             "0.0.0.0",
             ["AAA", "BBB"],
             "localhost",
@@ -158,6 +161,7 @@ class TestArtemisDataCollector(unittest.TestCase):
             "artemis",
             "artemis",
             "http://localhost:8161",
+            "invalidurl",
             "0.0.0.0",
             None,
             "localhost",
@@ -177,6 +181,7 @@ class TestArtemisDataCollector(unittest.TestCase):
             "artemis",
             "artemis",
             "http://localhost:12345",
+            "invalidurl",
             "0.0.0.0",
             ["TEST_QUEUE"],
             "localhost",
@@ -197,6 +202,7 @@ class TestArtemisDataCollector(unittest.TestCase):
             "artemis",
             "AAA",
             "http://localhost:8161",
+            "invalidurl",
             "0.0.0.0",
             ["TEST_QUEUE"],
             "localhost",
@@ -217,6 +223,7 @@ class TestArtemisDataCollector(unittest.TestCase):
             "artemis",
             "artemis",
             "http://localhost:8161",
+            "invalidurl",
             "AAA",
             ["TEST_QUEUE"],
             "localhost",
@@ -231,6 +238,31 @@ class TestArtemisDataCollector(unittest.TestCase):
             ArtemisDataCollector(config_wrong_broker_name)
 
         assert "Failed to get queues from ActiveMQ Artemis" in str(e)
+
+    def test_failover_url(self):
+        config_failover_url = Config(
+            "artemis",
+            "artemis",
+            "invalidurl",  # main broker invalid
+            "http://localhost:8161",  # use main broker as failover
+            "0.0.0.0",
+            ["TEST_QUEUE"],
+            "localhost",
+            5432,
+            "workflow",
+            "workflow",
+            "workflow",
+            10.0,  # http_timeout
+        )
+
+        adc = ArtemisDataCollector(config_failover_url)
+
+        with self.assertLogs() as cm:
+            queues = adc.get_activemq_queues()
+
+        assert isinstance(queues, list)
+        assert "TEST_QUEUE" in queues
+        assert "Primary broker connection error" in cm.output[0]
 
 
 def test_parse_args():
