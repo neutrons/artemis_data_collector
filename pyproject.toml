@@ -2,11 +2,6 @@
 name = "artemis_data_collector"
 description = "Artemis Data Collector"
 dynamic = ["version"]
-requires-python = ">=3.12"
-dependencies = [
-  "requests",
-  "psycopg"
-]
 license = { text = "MIT" }
 keywords = ["neutrons", "example", "python"]
 readme = "README.md"
@@ -20,8 +15,6 @@ issues = "https://github.com/neutrons/artemis_data_collector/issues"
 [build-system]
 requires = [
   "setuptools>= 42",
-  "wheel",
-  "toml",
   "versioningit"
 ]
 build-backend = "setuptools.build_meta"
@@ -64,3 +57,42 @@ line-length = 120
 select = ["A", "ARG","ASYNC","BLE","C90", "E", "F", "I", "N", "UP032", "W"]
 
 # Add additional 3rd party tool configuration here as needed
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.dependencies]
+python = ">=3.12"
+requests = "*"
+"stomp.py" = "7.*"
+psycopg = ">=3.2"
+versioningit = ">=3.2.0"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[tool.pixi.feature.dev.dependencies]
+pre-commit = "*"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+artemis_data_collector = { path = ".", editable = true }
+
+[tool.pixi.feature.build.dependencies]
+python-build = "*"
+setuptools = "*"
+
+[tool.pixi.feature.deploy.dependencies]
+pip = "*"
+
+[tool.pixi.environments]
+default = { features = ["dev", "build", "test"]}
+test = { features = ["test"]}
+build = { features = ["build"]}
+deploy = {features = ["deploy"]}
+
+[tool.pixi.tasks]
+test = "python -m pytest tests"
+test-cov = "python -m pytest --cov=src --cov-report=xml --cov-report=term-missing tests"
+build = "python -m build"
