@@ -6,17 +6,11 @@ The queue information is collected from ActiveMQ Artemis broker using [Jolokia R
 
 ## Setup for local development and testing
 
-Create and activate the conda environment
+Create and activate the pixi environment
 
 ```
-conda env create
-conda activate artemis_data_collector
-```
-
-Install the package
-
-```
-python -m pip install -e .
+pixi install
+pixi shell
 ```
 
 Then you can run the application by
